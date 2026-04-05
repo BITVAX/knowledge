@@ -1,5 +1,7 @@
+/* @odoo-module */
+
 import {HtmlField, htmlField} from "@web/views/fields/html/html_field";
-import {onMounted} from "@odoo/owl";
+import {onMounted, onPatched} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
 
@@ -8,18 +10,29 @@ class DocumentPageReferenceField extends HtmlField {
         super.setup();
         this.orm = useService("orm");
         this.action = useService("action");
-        onMounted(() => {
-            const links = document.querySelectorAll(".oe_direct_line");
-            links.forEach((link) => {
-                link.addEventListener("click", (event) =>
-                    this._onClickDirectLink(event)
-                );
-            });
-        });
+        this._onClickDirectLink = this._onClickDirectLink.bind(this);
+        onMounted(() => this._bindLinks());
+        onPatched(() => this._bindLinks());
+    }
+    _bindLinks() {
+        const el = this.readonlyElementRef && this.readonlyElementRef.el;
+        if (!el) return;
+        // Remove target="_blank" from internal reference links
+        // (added by retargetLinks in HtmlField)
+        for (const link of el.querySelectorAll("a.oe_direct_line")) {
+            link.removeAttribute("target");
+            link.removeAttribute("rel");
+            link.removeEventListener("click", this._onClickDirectLink);
+            link.addEventListener("click", this._onClickDirectLink);
+        }
     }
     _onClickDirectLink(event) {
-        const {oeModel: model, oeId} = event.target.dataset;
-        const id = parseInt(oeId, 10);
+        event.preventDefault();
+        event.stopPropagation();
+        const target = event.currentTarget;
+        const model = target.dataset.oeModel;
+        const id = parseInt(target.dataset.oeId, 10);
+        if (!model || !id) return;
         this.orm.call(model, "get_formview_action", [[id]], {}).then((action) => {
             this.action.doAction(action);
         });

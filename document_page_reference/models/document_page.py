@@ -22,6 +22,28 @@ class DocumentPage(models.Model):
         "Parsed Content", compute="_compute_content_parsed", sanitize=False, store=True
     )
 
+    def _get_page_index(self, link=True):
+        """Override to use oe_direct_line links compatible with the widget."""
+        self.ensure_one()
+        index = [
+            Markup("<li>") + subpage._get_page_index() + Markup("</li>")
+            for subpage in self.child_ids
+        ]
+        r = Markup("")
+        if link:
+            r = (
+                Markup(
+                    '<a href="#" class="oe_direct_line"'
+                    ' data-oe-model="%s" data-oe-id="%s">'
+                )
+                % (self._name, self.id)
+                + html_escape(self.name)
+                + Markup("</a>")
+            )
+        if index:
+            r += Markup("<ul>") + Markup("").join(index) + Markup("</ul>")
+        return r
+
     def get_formview_action(self, access_uid=None):
         res = super().get_formview_action(access_uid)
         view_id = self.env.ref("document_page.view_wiki_form").id
