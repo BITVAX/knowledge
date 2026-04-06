@@ -74,8 +74,10 @@ class DocumentPage(models.Model):
         self.ensure_one()
         raw = str(self.content or "")
         content_parsed = Markup(raw)
-        for text in re.findall(r"\{\{.*?\}\}", raw):
-            reference = re.sub(r"<[^>]*>", "", text).replace("{{", "").replace("}}", "")
+        for text in re.findall(r"\{\{.*?\}\}|\$\{.*?\}", raw):
+            reference = re.sub(
+                r"^\{\{|\}\}$|^\$\{|\}$", "", re.sub(r"<[^>]*>", "", text)
+            )
             content_parsed = content_parsed.replace(
                 text, self._resolve_reference(reference)
             )
@@ -107,10 +109,9 @@ class DocumentPage(models.Model):
         name = html_escape(doc.display_name) if doc else sanitized_code
         href = doc.backend_url if doc else "#"
         return Markup(
-            f"<a href='{href}' class='oe_direct_line' data-oe-model='{oe_model}' "
-            f"data-oe-id='{oe_id}' name='{sanitized_code}'>"
-            f"{name}</a>"
-        )
+            "<a href='%s' class='oe_direct_line' data-oe-model='%s' "
+            "data-oe-id='%s' name='%s'>%s</a>"
+        ) % (href, oe_model, oe_id, sanitized_code, name)
 
     def get_raw_content(self):
         return Markup(self.with_context(raw_reference=True).get_content())

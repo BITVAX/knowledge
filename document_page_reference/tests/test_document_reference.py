@@ -4,10 +4,12 @@
 from markupsafe import Markup
 
 from odoo.exceptions import ValidationError
+from odoo.tests import tagged
 
 from odoo.addons.base.tests.common import BaseCommon
 
 
+@tagged("post_install", "-at_install")
 class TestDocumentReference(BaseCommon):
     @classmethod
     def setUpClass(cls):
@@ -61,16 +63,14 @@ class TestDocumentReference(BaseCommon):
 
     def test_get_formview_action(self):
         res = self.page1.get_formview_action()
-        view_id = self.env.ref("document_page.view_wiki_form").id
-        expected_keys = {
-            "type": "ir.actions.act_window",
-            "res_model": "document.page",
-            "res_id": self.page1.id,
-            "target": "current",
-            "views": [(view_id, "form")],
-        }
-        for key, expected_value in expected_keys.items():
-            self.assertEqual(res.get(key), expected_value, f"Mismatch in key: {key}")
+        self.assertEqual(res.get("type"), "ir.actions.act_window")
+        self.assertEqual(res.get("res_model"), "document.page")
+        self.assertEqual(res.get("res_id"), self.page1.id)
+        self.assertEqual(res.get("target"), "current")
+        # Check views contains a form view (view_id may vary if overridden)
+        views = res.get("views", [])
+        self.assertEqual(len(views), 1, "Expected exactly one view")
+        self.assertEqual(views[0][1], "form", "Expected a form view")
 
     def test_compute_content_parsed(self):
         self.page1.content = Markup("<p>{{r2}}</p>")
@@ -84,3 +84,46 @@ class TestDocumentReference(BaseCommon):
         self.assertIn(f"data-oe-id='{self.page2.id}'", self.page1.content)
         self.assertIn(f"href='{self.page2.backend_url}'", self.page1.content_parsed)
         self.assertNotIn("&lt;a", self.page1.content)
+
+    def test_dollar_brace_reference_resolved(self):
+        """${ref} syntax should be resolved to links, same as {{ref}}."""
+        page = self.page_obj.create(
+            {
+                "name": "Dollar Ref Page",
+                "content": Markup("<p>See ${r2} for details.</p>"),
+                "reference": "dollar_test",
+            }
+        )
+        parsed = page.content_parsed
+        self.assertIn("<a ", parsed, "Dollar-brace reference not resolved to link")
+        self.assertNotIn("${r2}", parsed, "Raw ${r2} token still present in output")
+
+    def test_dollar_brace_unresolved_reference(self):
+        """${unknown_ref} should still produce a link (with the code as text)."""
+        page = self.page_obj.create(
+            {
+                "name": "Unresolved Dollar Ref",
+                "content": Markup("<p>See ${nonexistent} here.</p>"),
+                "reference": "unresolved_test",
+            }
+        )
+        parsed = page.content_parsed
+        self.assertIn("<a ", parsed, "Unresolved dollar-brace ref not converted")
+        self.assertNotIn(
+            "${nonexistent}", parsed, "Raw ${nonexistent} token still present"
+        )
+
+    def test_mixed_syntaxes(self):
+        """Both {{ref}} and ${ref} in the same content should be resolved."""
+        page = self.page_obj.create(
+            {
+                "name": "Mixed Syntax Page",
+                "content": Markup("<p>Link1: {{r2}} and Link2: ${r2}</p>"),
+                "reference": "mixed_test",
+            }
+        )
+        parsed = page.content_parsed
+        # Both references should be resolved — expect 2 <a> tags
+        self.assertEqual(
+            parsed.count("<a "), 2, "Expected 2 links but got: %s" % parsed
+        )
