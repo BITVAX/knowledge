@@ -79,6 +79,20 @@ class TestDocumentReference(BaseCommon):
         self.assertIn(f"href='{self.page2.backend_url}'", self.page1.content_parsed)
         self.assertIn("Test Page 2", self.page1.content_parsed)
 
+    def test_category_index_follows_children(self):
+        category = self.page_obj.create({"name": "Test Category", "type": "category"})
+        first = self.page_obj.create(
+            {"name": "Test Child 1", "parent_id": category.id, "reference": "child1"}
+        )
+        self.assertIn("Test Child 1", category.content_parsed)
+        # A page (or category) added later must appear in the stored index.
+        self.page_obj.create(
+            {"name": "Test Child 2", "parent_id": category.id, "reference": "child2"}
+        )
+        self.assertIn("Test Child 2", category.content_parsed)
+        first.name = "Test Child 1 renamed"
+        self.assertIn("Test Child 1 renamed", category.content_parsed)
+
     def test_inverse_content_replacement(self):
         self.page1.content = "{{r2}}"
         self.assertIn(f"data-oe-id='{self.page2.id}'", self.page1.content)
@@ -124,6 +138,4 @@ class TestDocumentReference(BaseCommon):
         )
         parsed = page.content_parsed
         # Both references should be resolved — expect 2 <a> tags
-        self.assertEqual(
-            parsed.count("<a "), 2, "Expected 2 links but got: %s" % parsed
-        )
+        self.assertEqual(parsed.count("<a "), 2, f"Expected 2 links but got: {parsed}")

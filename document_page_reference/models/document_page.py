@@ -50,7 +50,10 @@ class DocumentPage(models.Model):
         res["views"] = [(view_id, "form")]
         return res
 
-    @api.depends("content")
+    # A category's content is its (non-stored) index of children, so the
+    # stored parsed content must follow the children too: otherwise a page
+    # or category added later never shows up in its parent's index.
+    @api.depends("content", "child_ids", "child_ids.name", "child_ids.child_ids")
     def _compute_content_parsed(self):
         for record in self:
             record.content_parsed = record.get_content()
