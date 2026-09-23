@@ -5,6 +5,7 @@ from markupsafe import Markup
 
 from odoo.exceptions import ValidationError
 from odoo.tests import tagged
+from odoo.tools import html_escape
 
 from odoo.addons.base.tests.common import BaseCommon
 
@@ -76,7 +77,10 @@ class TestDocumentReference(BaseCommon):
         self.page1.content = Markup("<p>{{r2}}</p>")
         self.assertIn("data-oe-model='document.page'", self.page1.content_parsed)
         self.assertIn(f"data-oe-id='{self.page2.id}'", self.page1.content_parsed)
-        self.assertIn(f"href='{self.page2.backend_url}'", self.page1.content_parsed)
+        # content_parsed is HTML: the & of the URL is escaped in the href.
+        self.assertIn(
+            f"href='{html_escape(self.page2.backend_url)}'", self.page1.content_parsed
+        )
         self.assertIn("Test Page 2", self.page1.content_parsed)
 
     def test_category_index_follows_children(self):
@@ -96,7 +100,9 @@ class TestDocumentReference(BaseCommon):
     def test_inverse_content_replacement(self):
         self.page1.content = "{{r2}}"
         self.assertIn(f"data-oe-id='{self.page2.id}'", self.page1.content)
-        self.assertIn(f"href='{self.page2.backend_url}'", self.page1.content_parsed)
+        self.assertIn(
+            f"href='{html_escape(self.page2.backend_url)}'", self.page1.content_parsed
+        )
         self.assertNotIn("&lt;a", self.page1.content)
 
     def test_dollar_brace_reference_resolved(self):

@@ -50,10 +50,16 @@ class DocumentPage(models.Model):
         res["views"] = [(view_id, "form")]
         return res
 
-    # A category's content is its (non-stored) index of children, so the
-    # stored parsed content must follow the children too: otherwise a page
-    # or category added later never shows up in its parent's index.
-    @api.depends("content", "child_ids", "child_ids.name", "child_ids.child_ids")
+    # A category's content is its index of children, but the core computes it
+    # from history_head only: the cached value (and the stored content_parsed
+    # built from it) never followed a page or category added later. Adding
+    # the children to the dependencies invalidates content and, through it,
+    # recomputes the stored parsed index.
+    @api.depends("child_ids", "child_ids.name", "child_ids.child_ids")
+    def _compute_content(self):
+        return super()._compute_content()
+
+    @api.depends("content")
     def _compute_content_parsed(self):
         for record in self:
             record.content_parsed = record.get_content()
