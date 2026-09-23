@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+
+    <!-- Same as web.HtmlField, plus a ref on the readonly element so the
+         widget can bind the click handler of the oe_direct_line links.
+         The Odoo 18 base template carries no ref at all. -->
+    <t t-name="document_page_reference.HtmlField">
+        <t t-if="props.readonly">
+            <span t-ref="readonlyElement" t-out="props.record.data[props.name] or ''" />
+        </t>
+        <t t-else="" t-call="web.TextField" />
+    </t>
+
+</templates>

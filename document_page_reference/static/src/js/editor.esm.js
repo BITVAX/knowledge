@@ -1,15 +1,21 @@
 /* @odoo-module */
 
 import {HtmlField, htmlField} from "@web/views/fields/html/html_field";
-import {onMounted, onPatched} from "@odoo/owl";
+import {onMounted, onPatched, useRef} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
 
 class DocumentPageReferenceField extends HtmlField {
+    // The base web.HtmlField of Odoo 18 renders the readonly value in a
+    // bare <span t-out> with no ref, so `readonlyElementRef` never exists
+    // and the links stay unbound: own template with the ref.
+    static template = "document_page_reference.HtmlField";
+
     setup() {
         super.setup();
         this.orm = useService("orm");
         this.action = useService("action");
+        this.readonlyElementRef = useRef("readonlyElement");
         this._onClickDirectLink = this._onClickDirectLink.bind(this);
         onMounted(() => this._bindLinks());
         onPatched(() => this._bindLinks());

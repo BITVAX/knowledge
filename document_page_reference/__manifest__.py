@@ -5,7 +5,7 @@
     "name": "Document Page Reference",
     "summary": """
         Include references on document pages""",
-    "version": "18.0.2.1.3",
+    "version": "18.0.2.1.4",
     "license": "AGPL-3",
     "author": "Creu Blanca,Odoo Community Association (OCA)",
     "website": "https://github.com/OCA/knowledge",
@@ -17,6 +17,7 @@
     "assets": {
         "web.assets_backend": [
             "document_page_reference/static/src/js/editor.esm.js",
+            "document_page_reference/static/src/xml/editor.xml",
         ],
         "web.assets_tests": [
             "document_page_reference/static/tests/test_document_page_reference_tour.esm.js",
